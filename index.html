@@ -1,0 +1,404 @@
+import React, { useState, useEffect } from 'react';
+import { Wine, GlassWater, PartyPopper, Heart, ArrowRight, RefreshCw, Share2, ShoppingBag, Star, Music, Coffee, BookOpen } from 'lucide-react';
+
+export default function WineDiagnosisApp() {
+  const [step, setStep] = useState('intro'); // intro, quiz, analyzing, result
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [scores, setScores] = useState({
+    sparkling: 0, // 外向的・感覚的（ムードメーカー）
+    white: 0,     // 外向的・論理的（冒険家・サバサバ）
+    lightRed: 0,  // 内向的・感覚的（芸術家・ロマンチスト）
+    heavyRed: 0   // 内向的・論理的（リーダー・こだわり）
+  });
+  const [result, setResult] = useState(null);
+
+  // 質問データ
+  const questions = [
+    {
+      id: 1,
+      text: "休日の理想的な過ごし方は？",
+      icon: <SunIcon />,
+      options: [
+        { text: "みんなでワイワイBBQやランチ", type: "sparkling", weight: 2 },
+        { text: "話題のスポットへお出かけ", type: "white", weight: 2 },
+        { text: "お家で映画や読書をゆっくり", type: "lightRed", weight: 2 },
+        { text: "少しリッチなディナーへ行く", type: "heavyRed", weight: 2 }
+      ]
+    },
+    {
+      id: 2,
+      text: "好きな映画やドラマのジャンルは？",
+      icon: <FilmIcon />,
+      options: [
+        { text: "ハッピーなラブコメディ", type: "sparkling", weight: 2 },
+        { text: "スカッとするアクション", type: "white", weight: 2 },
+        { text: "映像が綺麗なファンタジー", type: "lightRed", weight: 2 },
+        { text: "伏線回収がすごいミステリー", type: "heavyRed", weight: 2 }
+      ]
+    },
+    {
+      id: 3,
+      text: "友人グループの中でのあなたの役割は？",
+      icon: <UsersIcon />,
+      options: [
+        { text: "盛り上げ役・ムードメーカー", type: "sparkling", weight: 2 },
+        { text: "企画提案・幹事役", type: "heavyRed", weight: 2 },
+        { text: "聞き役・相談役", type: "lightRed", weight: 2 },
+        { text: "ツッコミ役・自由人", type: "white", weight: 2 }
+      ]
+    },
+    {
+      id: 4,
+      text: "部屋のインテリアの雰囲気は？",
+      icon: <HomeIcon />,
+      options: [
+        { text: "カラフルで可愛い感じ", type: "sparkling", weight: 1 },
+        { text: "シンプルで機能的", type: "white", weight: 1 },
+        { text: "間接照明がある落ち着いた感じ", type: "lightRed", weight: 1 },
+        { text: "高級感のあるモダンな感じ", type: "heavyRed", weight: 1 }
+      ]
+    },
+    {
+      id: 5,
+      text: "今、一番食べたいものは？",
+      icon: <UtensilsIcon />,
+      options: [
+        { text: "甘いスイーツ全般", type: "sparkling", weight: 2 },
+        { text: "新鮮なシーフードやサラダ", type: "white", weight: 2 },
+        { text: "煮込み料理やチーズ", type: "lightRed", weight: 2 },
+        { text: "ガッツリお肉！ステーキ！", type: "heavyRed", weight: 2 }
+      ]
+    }
+  ];
+
+  // 診断結果データ
+  const resultsData = {
+    sparkling: {
+      title: "天真爛漫な「愛されアイドル」タイプ",
+      catchphrase: "キラキラ輝く泡のように、場を明るくする天才。",
+      wineName: "プロセッコ（イタリア産スパークリング）",
+      description: "あなたは感情豊かで、周りの人を笑顔にするエネルギーを持っています。そんなあなたには、フルーティで華やかなスパークリングワインがぴったり。女子会やパーティーの乾杯に最適です。",
+      tags: ["#ムードメーカー", "#トレンド好き", "#甘え上手"],
+      color: "from-pink-400 to-rose-400",
+      textColor: "text-pink-600",
+      imageEmoji: "🥂",
+      food: "フルーツタルト、生ハム"
+    },
+    white: {
+      title: "爽やかな「自由な冒険家」タイプ",
+      catchphrase: "キリッとした酸味のように、裏表のないサバサバ系。",
+      wineName: "ソーヴィニヨン・ブラン（白ワイン）",
+      description: "あなたは好奇心旺盛で、自分の考えをしっかり持っています。媚びない魅力を持つあなたには、ハーブのような香りとキレのある酸味が特徴の白ワインがベストマッチ。リフレッシュしたい時に。",
+      tags: ["#サバサバ系", "#アクティブ", "#センス抜群"],
+      color: "from-yellow-300 to-lime-400",
+      textColor: "text-lime-700",
+      imageEmoji: "🌿",
+      food: "カルパッチョ、グリルチキン"
+    },
+    lightRed: {
+      title: "知的な「ロマンチスト」タイプ",
+      catchphrase: "繊細で複雑な香り。独特の世界観を持つ芸術家。",
+      wineName: "ピノ・ノワール（赤ワイン）",
+      description: "あなたは感受性が強く、美意識が高いタイプ。一人の時間を大切にするあなたには、イチゴやチェリーのような繊細な香りが楽しめる、上品な赤ワインが心に寄り添います。",
+      tags: ["#ミステリアス", "#美意識高い", "#聞き上手"],
+      color: "from-red-400 to-purple-500",
+      textColor: "text-purple-700",
+      imageEmoji: "🍷",
+      food: "鴨肉のロースト、トリュフ"
+    },
+    heavyRed: {
+      title: "情熱的な「カリスマリーダー」タイプ",
+      catchphrase: "力強く濃厚。周りを引っ張る頼れる存在。",
+      wineName: "カベルネ・ソーヴィニヨン（赤ワイン）",
+      description: "あなたは目標に向かって努力できる野心家。論理的で決断力があります。そんなあなたには、タンニン（渋み）がしっかりした濃厚なフルボディの赤ワインが、成功への活力を与えてくれます。",
+      tags: ["#仕事できる", "#姉御肌", "#グルメ"],
+      color: "from-purple-800 to-indigo-900",
+      textColor: "text-indigo-900",
+      imageEmoji: "🍇",
+      food: "熟成ステーキ、ハードチーズ"
+    }
+  };
+
+  const handleAnswer = (type, weight) => {
+    setScores(prev => ({
+      ...prev,
+      [type]: prev[type] + weight
+    }));
+
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      setStep('analyzing');
+    }
+  };
+
+  const calculateResult = () => {
+    // スコアが一番高いタイプを判定
+    const maxScore = Math.max(...Object.values(scores));
+    const resultType = Object.keys(scores).find(key => scores[key] === maxScore);
+    setResult(resultsData[resultType] || resultsData.sparkling); // fallback
+  };
+
+  useEffect(() => {
+    if (step === 'analyzing') {
+      calculateResult();
+      const timer = setTimeout(() => {
+        setStep('result');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  const restartQuiz = () => {
+    setScores({ sparkling: 0, white: 0, lightRed: 0, heavyRed: 0 });
+    setCurrentQuestionIndex(0);
+    setStep('intro');
+  };
+
+  // --- Components ---
+
+  const IntroScreen = () => (
+    <div className="flex flex-col items-center justify-center h-full p-6 text-center animate-fade-in">
+      <div className="mb-6 relative">
+        <div className="absolute inset-0 bg-purple-200 rounded-full blur-xl opacity-50 animate-pulse"></div>
+        <div className="relative bg-gradient-to-br from-purple-600 to-pink-500 text-white p-6 rounded-full shadow-xl">
+          <Wine size={64} />
+        </div>
+      </div>
+      <h1 className="text-3xl font-bold text-gray-800 mb-2">
+        <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">Wine</span> Personality
+      </h1>
+      <p className="text-gray-500 mb-8 font-medium">性格で選ぶ、あなただけの運命の1本。</p>
+      
+      <div className="bg-white p-6 rounded-2xl shadow-md mb-8 w-full max-w-sm">
+        <p className="text-sm text-gray-600 mb-4">
+          「ワインは詳しくないけど、美味しいお酒は好き」<br/>
+          そんなあなたのためのAI診断。
+          5つの質問に答えるだけで、あなたの性格にぴったりのワインが見つかります。
+        </p>
+        <div className="flex justify-center gap-2 text-xs text-gray-400">
+          <span>#所要時間1分</span>
+          <span>#知識不要</span>
+        </div>
+      </div>
+
+      <button 
+        onClick={() => setStep('quiz')}
+        className="w-full max-w-xs bg-gray-900 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition hover:scale-105 hover:shadow-xl flex items-center justify-center gap-2"
+      >
+        診断をスタート <ArrowRight size={18} />
+      </button>
+    </div>
+  );
+
+  const QuizScreen = () => {
+    const question = questions[currentQuestionIndex];
+    const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+
+    return (
+      <div className="flex flex-col h-full p-6 max-w-md mx-auto animate-slide-up">
+        {/* Progress Bar */}
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
+          <div 
+            className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
+
+        <div className="flex-1 flex flex-col justify-center">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Q{question.id}.</h2>
+          <h3 className="text-2xl font-bold text-gray-900 mb-8 leading-relaxed">
+            {question.text}
+          </h3>
+
+          <div className="space-y-4">
+            {question.options.map((option, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleAnswer(option.type, option.weight)}
+                className="w-full text-left p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 shadow-sm group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-700 group-hover:text-purple-700">{option.text}</span>
+                  <div className="w-5 h-5 rounded-full border-2 border-gray-300 group-hover:border-purple-500 group-hover:bg-purple-500 transition-colors"></div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        <div className="mt-8 text-center text-gray-400 text-xs">
+          直感でお答えください
+        </div>
+      </div>
+    );
+  };
+
+  const LoadingScreen = () => (
+    <div className="flex flex-col items-center justify-center h-full p-6 text-center animate-fade-in bg-gray-50">
+      <div className="relative mb-8">
+        <div className="absolute inset-0 bg-pink-300 rounded-full blur-xl opacity-60 animate-ping"></div>
+        <div className="relative bg-white p-6 rounded-full shadow-xl">
+           <GlassWater size={48} className="text-purple-600 animate-bounce" />
+        </div>
+      </div>
+      <h2 className="text-2xl font-bold text-gray-800 mb-2">分析中...</h2>
+      <p className="text-gray-500">あなたの性格データを解析しています</p>
+      
+      <div className="mt-8 flex gap-2">
+        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+        <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+      </div>
+    </div>
+  );
+
+  const ResultScreen = () => {
+    if (!result) return null;
+
+    return (
+      <div className="flex flex-col h-full bg-white animate-fade-in overflow-y-auto">
+        {/* Header Image Area */}
+        <div className={`w-full h-48 bg-gradient-to-br ${result.color} flex items-center justify-center relative overflow-hidden shrink-0`}>
+          <div className="absolute inset-0 bg-white/10 pattern-dots"></div>
+          <div className="text-8xl animate-float drop-shadow-lg z-10">{result.imageEmoji}</div>
+          <div className="absolute bottom-0 left-0 w-full h-8 bg-white rounded-t-3xl"></div>
+        </div>
+
+        <div className="px-6 pb-20 -mt-2">
+          {/* Result Type Badge */}
+          <div className="flex justify-center mb-4">
+            <span className={`px-4 py-1 rounded-full bg-gray-100 text-sm font-bold tracking-wider ${result.textColor}`}>
+              WINE PERSONALITY
+            </span>
+          </div>
+
+          <h2 className={`text-2xl font-black text-center text-gray-900 mb-2 leading-tight`}>
+            {result.title}
+          </h2>
+          <p className="text-center text-gray-500 text-sm mb-6 font-medium">
+            "{result.catchphrase}"
+          </p>
+
+          {/* Tags */}
+          <div className="flex justify-center gap-2 mb-8 flex-wrap">
+            {result.tags.map((tag, i) => (
+              <span key={i} className="text-xs bg-gray-50 border border-gray-200 px-3 py-1 rounded-full text-gray-600">
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          {/* Diagnosis Content */}
+          <div className="bg-gray-50 rounded-2xl p-6 mb-8 relative border border-gray-100">
+            <div className="absolute -top-3 left-6 bg-white px-2 py-1 text-xs font-bold text-gray-400 border border-gray-200 rounded">
+              性格分析
+            </div>
+            <p className="text-gray-700 leading-relaxed text-sm text-justify">
+              {result.description}
+            </p>
+          </div>
+
+          {/* Wine Recommendation Card */}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden mb-8 transform transition hover:scale-[1.02]">
+            <div className="bg-gray-900 text-white py-2 px-4 text-center text-xs font-bold tracking-widest">
+              BEST MATCH WINE
+            </div>
+            <div className="p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className={`w-16 h-16 rounded-lg bg-gradient-to-br ${result.color} flex items-center justify-center text-3xl shadow-inner shrink-0`}>
+                  {result.imageEmoji}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-gray-800 leading-tight mb-1">{result.wineName}</h3>
+                  <div className="flex items-center gap-1 text-xs text-yellow-500">
+                    <Star size={12} fill="currentColor" />
+                    <Star size={12} fill="currentColor" />
+                    <Star size={12} fill="currentColor" />
+                    <Star size={12} fill="currentColor" />
+                    <Star size={12} fill="currentColor" />
+                    <span className="text-gray-400 ml-1">(4.8)</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 mb-6">
+                <div className="flex-1 bg-gray-50 rounded p-2 text-center">
+                  <div className="text-[10px] text-gray-400 mb-1">相性の良い料理</div>
+                  <div className="text-xs font-bold text-gray-700">{result.food}</div>
+                </div>
+              </div>
+
+              <button className={`w-full bg-gradient-to-r ${result.color} text-white font-bold py-3 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity`}>
+                <ShoppingBag size={18} />
+                <span>このワインを見る</span>
+              </button>
+              <div className="text-center mt-2 text-[10px] text-gray-400">
+                ※初回購入限定 10%OFFクーポン適用済み
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+             <button onClick={restartQuiz} className="flex-1 py-3 border border-gray-300 rounded-xl text-gray-600 font-bold text-sm hover:bg-gray-50 flex items-center justify-center gap-2">
+               <RefreshCw size={16} /> もう一度診断
+             </button>
+             <button className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold text-sm hover:bg-blue-600 flex items-center justify-center gap-2 shadow-md">
+               <Share2 size={16} /> 結果をシェア
+             </button>
+          </div>
+
+        </div>
+      </div>
+    );
+  };
+
+  // --- Main Render ---
+  return (
+    <div className="w-full min-h-screen bg-gray-100 flex items-center justify-center font-sans text-gray-800">
+      <div className="w-full max-w-md h-[800px] max-h-screen bg-white shadow-2xl sm:rounded-[30px] overflow-hidden relative flex flex-col">
+        {step === 'intro' && <IntroScreen />}
+        {step === 'quiz' && <QuizScreen />}
+        {step === 'analyzing' && <LoadingScreen />}
+        {step === 'result' && <ResultScreen />}
+      </div>
+
+      {/* Styles for animations */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.5s ease-out forwards;
+        }
+        @keyframes slide-up {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.4s ease-out forwards;
+        }
+        .pattern-dots {
+          background-image: radial-gradient(#ffffff 1px, transparent 1px);
+          background-size: 20px 20px;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// Simple Icon Components for Quiz (to avoid external SVG dependency issues in preview)
+const SunIcon = () => <div className="text-3xl">☀️</div>;
+const FilmIcon = () => <div className="text-3xl">🎬</div>;
+const UsersIcon = () => <div className="text-3xl">👯‍♀️</div>;
+const HomeIcon = () => <div className="text-3xl">🏠</div>;
+const UtensilsIcon = () => <div className="text-3xl">🍽️</div>;
